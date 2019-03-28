@@ -1,0 +1,181 @@
+---
+output: 
+  pdf_document:
+    keep_tex: yes
+    fig_caption: yes
+    number_sections: yes
+geometry: margin=2.54cm
+title: Experiment Title
+subtitle: https://github.com/Jiaqi-Li-Duke/ENV872_Project_jl769
+author: Jiaqi Li
+abstract: "Experimental overview. This section should be no longer than 250 words."
+fontsize: 12pt
+mainfont: Times New Roman
+editor_options: 
+  chunk_output_type: console
+---
+
+<Information in these brackets are used for annotating the RMarkdown file. They will not appear in the final version of the PDF document>
+
+\newpage
+\tableofcontents 
+\newpage
+\listoftables 
+\newpage
+\listoffigures 
+\newpage
+
+<Setup the global options for the R chunks in your document>
+
+<Note: set up autoreferencing for figures and tables in your document>
+
+```{r setup, include=FALSE}
+# Set your working directory
+setwd("/Users/ljq/Desktop/Blue Devils/Data Analysis/Final_Project")
+# Load your packages
+library(dplyr)
+library(lubridate)
+library(tidyverse)
+# Set your ggplot theme
+
+```
+
+
+# Research Question and Rationale
+
+<Paragraph detailing the rationale for your analysis. What is the significant application and/or interest in this topic? Connect to environmental topic(s)/challenge(s).>
+
+<Paragraph detailing your research question(s) and goals. What do you want to find out? Include a sentence (or a few) on the dataset you are using to answer this question - just enough to give your reader an idea of where you are going with the analysis.>
+
+\newpage
+
+# Dataset Information
+
+<Information on how the dataset for this analysis were collected, the data contained in the dataset, and any important pieces of information that are relevant to your analyses. This section should contain much of same information as the README file for the dataset but formatted in a way that is more narrative.>
+
+<Add a table that summarizes your data structure. This table can be made in markdown text or inserted as a `kable` function in an R chunk. If the latter, do not include the code used to generate your table.>
+
+```{r Import Data}
+# Import 2016 Meteorology Data
+wind2016 <- read.csv("./Data/Raw/2016Weather.csv", header = T)
+colnames(wind2016) <- c('Time', 'Air.Pressure', 'Dewpoint', 'Precipitation', 
+                        'Precipitation.Intensity', 'Relative.Humidity', 'Temperature',
+                        'Total.Precipitation', 'Wind.Chill.Temperature', 'Wind.Direction',
+                        'Wind.Direction.vct', 'Wind.Speed', 'Wind.Speed.avg', 'Wind.Speed.max')
+wind2016$u.wind <- - wind2016$Wind.Speed * sin(2 * pi * wind2016$Wind.Direction / 360)
+wind2016$v.wind <- - wind2016$Wind.Speed * cos(2 * pi * wind2016$Wind.Direction / 360)
+
+#Convert time to date
+wind2016$Time <- as.POSIXct(wind2016$Time)
+wind2016$Date.noon <- as.Date(wind2016$Time, format = "%Y/%m/%d %H:%M:%S", tz = "Antarctica/Davis")
+wind2016$Date <- as.Date(wind2016$Time, format = "%Y/%m/%d %H:%M:%S", tz = "America/Toronto")
+
+#Compute mean
+mean2016 <- as.data.frame(aggregate(cbind(Temperature, Wind.Speed, u.wind, v.wind) ~ Date.noon, wind2016, mean))
+mean2016$Wind.direction.avg <- (atan2(mean2016$u.wind, mean2016$v.wind) * 360/2/pi) + 180
+mean2016 <- select(mean2016, 'Date.noon', 'Temperature', 'Wind.Speed', 'Wind.direction.avg')
+
+direction <- read.csv("./Data/Raw/WindDirection.csv", header = T)
+direction$cardinal <- lapply(direction$cardinal, as.character)
+
+mean2016 <- mean2016 %>%
+  mutate(Wind.direction = cut(
+    Wind.direction.avg,
+    breaks = c(0, direction$degree_max, 360), 
+    labels = c(direction$cardinal, 'N')
+  ))
+
+# Import 2017 Meteorology Data
+
+wind2017 <- read.csv("./Data/Raw/2017Weather.csv", header = T)
+colnames(wind2017) <- c('Time', 'Air.Pressure', 'Dewpoint', 'Precipitation', 
+                        'Precipitation.Intensity', 'Relative.Humidity', 'Temperature',
+                        'Total.Precipitation', 'Wind.Chill.Temperature', 'Wind.Direction',
+                        'Wind.Direction.vct', 'Wind.Speed', 'Wind.Speed.avg', 'Wind.Speed.max')
+wind2017$u.wind <- - wind2017$Wind.Speed * sin(2 * pi * wind2017$Wind.Direction / 360)
+wind2017$v.wind <- - wind2017$Wind.Speed * cos(2 * pi * wind2017$Wind.Direction / 360)
+
+#Convert time to date
+wind2017$Time <- strptime(wind2017$Time, format= "%m/%d/%Y %H:%M", tz = "America/Toronto")
+wind2017$Time <- as.POSIXct(wind2017$Time)
+wind2017$Date.noon <- as.Date(wind2017$Time, format = "%Y/%m/%d %H:%M:%S", tz = "Antarctica/Davis")
+wind2017$Date <- as.Date(wind2017$Time, format = "%Y/%m/%d %H:%M:%S", tz = "America/Toronto")
+
+#Compute mean
+mean2017 <- as.data.frame(aggregate(cbind(Temperature, Wind.Speed, u.wind, v.wind) ~ Date.noon, wind2017, mean))
+mean2017$Wind.direction.avg <- (atan2(mean2017$u.wind, mean2017$v.wind) * 360/2/pi) + 180
+mean2017 <- select(mean2017, 'Date.noon', 'Temperature', 'Wind.Speed', 'Wind.direction.avg')
+mean2017 <- mean2017 %>%
+  mutate(Wind.direction = cut(
+    Wind.direction.avg,
+    breaks = c(0, direction$degree_max, 360), 
+    labels = c(direction$cardinal, 'N')
+  ))
+
+# Import 2018 Meteorology Data
+
+wind2018 <- read.csv("./Data/Raw/2018Weather.csv", header = T)
+colnames(wind2018) <- c('Time', 'Air.Pressure', 'Dewpoint', 'Precipitation', 
+                        'Precipitation.Intensity', 'Relative.Humidity', 'Temperature',
+                        'Total.Precipitation', 'Wind.Chill.Temperature', 'Wind.Direction',
+                        'Wind.Direction.vct', 'Wind.Speed', 'Wind.Speed.avg', 'Wind.Speed.max')
+wind2018$u.wind <- - wind2018$Wind.Speed * sin(2 * pi * wind2018$Wind.Direction / 360)
+wind2018$v.wind <- - wind2018$Wind.Speed * cos(2 * pi * wind2018$Wind.Direction / 360)
+
+#Convert time to date
+wind2018$Time <- strptime(wind2018$Time, format= "%Y-%m-%d %H:%M:%S", tz = "America/Toronto")
+wind2018$Time <- as.POSIXct(wind2018$Time)
+wind2018$Date.noon <- as.Date(wind2018$Time, format = "%Y-%m-%d %H:%M:%S", tz = "Antarctica/Davis")
+wind2018$Date <- as.Date(wind2018$Time, format = "%Y-%m-%d %H:%M:%S", tz = "America/Toronto")
+
+#Compute mean
+mean2018 <- as.data.frame(aggregate(cbind(Temperature, Wind.Speed, u.wind, v.wind) ~ Date.noon, wind2018, mean))
+mean2018$Wind.direction.avg <- (atan2(mean2018$u.wind, mean2018$v.wind) * 360/2/pi) + 180
+mean2018 <- select(mean2018, 'Date.noon', 'Temperature', 'Wind.Speed', 'Wind.direction.avg')
+
+mean2018 <- mean2018 %>%
+  mutate(Wind.direction = cut(
+    Wind.direction.avg,
+    breaks = c(0, direction$degree_max, 360), 
+    labels = c(direction$cardinal, 'N')
+  ))
+
+#Merge with chloroprene data
+air <- read.csv("./Data/Raw/Air.csv", header = T)
+colnames(air) <- c("Date.noon", "Chad.Baker", "Hwy44", "Highschool", "Elementary.School",
+                   "Levee", "Ochsner.Hospital")
+air$Date.noon <- as.Date(air$Date.noon, format= "%m/%d/%Y")
+data2016 <- merge(mean2016, air, by = "Date.noon")
+data2016 <- mutate(data2016, Year= year(Date.noon), Month = month(Date.noon))
+data2017 <- merge(mean2017, air, by = "Date.noon")
+data2017 <- mutate(data2017, Year= year(Date.noon), Month = month(Date.noon))
+data2018 <- merge(mean2018, air, by = "Date.noon")
+data2018 <- mutate(data2018, Year= year(Date.noon), Month = month(Date.noon))
+data.all <- rbind(data2016, data2017, data2018)
+
+```
+
+\newpage
+
+# Exploratory Data Analysis and Wrangling
+
+<Include R chunks for 5+ lines of summary code (display code and output), 3+ exploratory graphs (display graphs only), and any wrangling you do to your dataset(s).> 
+
+<Include text sections to accompany these R chunks to explain the reasoning behind your workflow, and the rationale for your approach.>
+
+
+\newpage
+
+# Analysis
+<Include R chunks for 3+ statistical tests (display code and output) and 3+ final visualization graphs (display graphs only).>
+
+<Include text sections to accompany these R chunks to explain the reasoning behind your workflow, rationale for your approach, and the justification of meeting or failing to meet assumptions of tests.>
+
+
+\newpage
+
+# Summary and Conclusions
+<Summarize your major findings from your analyses. What conclusions do you draw from your findings? Make sure to apply this to a broader application for the research question you have answered.>
+
+
+
