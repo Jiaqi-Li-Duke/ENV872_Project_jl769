@@ -36,8 +36,10 @@ setwd("/Users/ljq/Desktop/Blue Devils/Data Analysis/Final_Project")
 library(dplyr)
 library(lubridate)
 library(tidyverse)
+library(nlme)
 # Set your ggplot theme
-
+light.theme <- theme_light(base_size = 18) +
+  theme(axis.text = element_text(color = "black"))
 ```
 
 
@@ -59,22 +61,29 @@ library(tidyverse)
 # Import 2016 Meteorology Data
 wind2016 <- read.csv("./Data/Raw/2016Weather.csv", header = T)
 colnames(wind2016) <- c('Time', 'Air.Pressure', 'Dewpoint', 'Precipitation', 
-                        'Precipitation.Intensity', 'Relative.Humidity', 'Temperature',
-                        'Total.Precipitation', 'Wind.Chill.Temperature', 'Wind.Direction',
-                        'Wind.Direction.vct', 'Wind.Speed', 'Wind.Speed.avg', 'Wind.Speed.max')
-wind2016$u.wind <- - wind2016$Wind.Speed * sin(2 * pi * wind2016$Wind.Direction / 360)
-wind2016$v.wind <- - wind2016$Wind.Speed * cos(2 * pi * wind2016$Wind.Direction / 360)
+                        'Precipitation.Intensity','Relative.Humidity', 
+                        'Temperature', 'Total.Precipitation', 
+                        'Wind.Chill.Temperature', 'Wind.Direction',
+                        'Wind.Direction.vct', 'Wind.Speed', 'Wind.Speed.avg', 
+                        'Wind.Speed.max')
+wind2016$u.wind <- - wind2016$Wind.Speed * sin(2*pi*wind2016$Wind.Direction/360)
+wind2016$v.wind <- - wind2016$Wind.Speed * cos(2*pi*wind2016$Wind.Direction/360)
 
 #Convert time to date
 wind2016$Time <- as.POSIXct(wind2016$Time)
-wind2016$Date.noon <- as.Date(wind2016$Time, format = "%Y/%m/%d %H:%M:%S", tz = "Antarctica/Davis")
-wind2016$Date <- as.Date(wind2016$Time, format = "%Y/%m/%d %H:%M:%S", tz = "America/Toronto")
+wind2016$Date.noon <- as.Date(wind2016$Time, format = "%Y/%m/%d %H:%M:%S", tz =
+                                "Antarctica/Davis")
+wind2016$Date <- as.Date(wind2016$Time, format = "%Y/%m/%d %H:%M:%S", tz =
+                           "America/Toronto")
 
 #Compute mean
-mean2016 <- as.data.frame(aggregate(cbind(Temperature, Wind.Speed, u.wind, v.wind) ~ Date.noon, wind2016, mean))
-mean2016$Wind.direction.avg <- (atan2(mean2016$u.wind, mean2016$v.wind) * 360/2/pi) + 180
+mean2016 <- as.data.frame(aggregate(cbind(Temperature, Wind.Speed, u.wind, v.wind) ~
+                                      Date.noon, wind2016, mean))
+mean2016$Wind.direction.avg <- (atan2(mean2016$u.wind, mean2016$v.wind) * 360/2/pi)
++ 180
 mean2016 <- select(mean2016, 'Date.noon', 'Temperature', 'Wind.Speed', 'Wind.direction.avg')
 
+# Convert wind direction
 direction <- read.csv("./Data/Raw/WindDirection.csv", header = T)
 direction$cardinal <- lapply(direction$cardinal, as.character)
 
@@ -82,75 +91,88 @@ mean2016 <- mean2016 %>%
   mutate(Wind.direction = cut(
     Wind.direction.avg,
     breaks = c(0, direction$degree_max, 360), 
-    labels = c(direction$cardinal, 'N')
-  ))
+    labels = c(direction$cardinal, 'N')))
 
 # Import 2017 Meteorology Data
-
 wind2017 <- read.csv("./Data/Raw/2017Weather.csv", header = T)
 colnames(wind2017) <- c('Time', 'Air.Pressure', 'Dewpoint', 'Precipitation', 
-                        'Precipitation.Intensity', 'Relative.Humidity', 'Temperature',
-                        'Total.Precipitation', 'Wind.Chill.Temperature', 'Wind.Direction',
-                        'Wind.Direction.vct', 'Wind.Speed', 'Wind.Speed.avg', 'Wind.Speed.max')
-wind2017$u.wind <- - wind2017$Wind.Speed * sin(2 * pi * wind2017$Wind.Direction / 360)
-wind2017$v.wind <- - wind2017$Wind.Speed * cos(2 * pi * wind2017$Wind.Direction / 360)
+                        'Precipitation.Intensity','Relative.Humidity', 
+                        'Temperature', 'Total.Precipitation', 
+                        'Wind.Chill.Temperature', 'Wind.Direction',
+                        'Wind.Direction.vct', 'Wind.Speed', 'Wind.Speed.avg', 
+                        'Wind.Speed.max')
+wind2017$u.wind <- - wind2017$Wind.Speed * sin(2*pi*wind2017$Wind.Direction/360)
+wind2017$v.wind <- - wind2017$Wind.Speed * cos(2*pi*wind2017$Wind.Direction/360)
 
 #Convert time to date
-wind2017$Time <- strptime(wind2017$Time, format= "%m/%d/%Y %H:%M", tz = "America/Toronto")
+wind2017$Time <- strptime(wind2017$Time, format= "%m/%d/%Y %H:%M", tz = 
+                            "America/Toronto")
 wind2017$Time <- as.POSIXct(wind2017$Time)
-wind2017$Date.noon <- as.Date(wind2017$Time, format = "%Y/%m/%d %H:%M:%S", tz = "Antarctica/Davis")
-wind2017$Date <- as.Date(wind2017$Time, format = "%Y/%m/%d %H:%M:%S", tz = "America/Toronto")
+wind2017$Date.noon <- as.Date(wind2017$Time, format = "%Y/%m/%d %H:%M:%S", tz = 
+                                "Antarctica/Davis")
+wind2017$Date <- as.Date(wind2017$Time, format = "%Y/%m/%d %H:%M:%S", tz = 
+                           "America/Toronto")
 
 #Compute mean
-mean2017 <- as.data.frame(aggregate(cbind(Temperature, Wind.Speed, u.wind, v.wind) ~ Date.noon, wind2017, mean))
+mean2017 <- as.data.frame(aggregate(cbind(Temperature, Wind.Speed, u.wind, v.wind) ~
+                                      Date.noon, wind2017, mean))
 mean2017$Wind.direction.avg <- (atan2(mean2017$u.wind, mean2017$v.wind) * 360/2/pi) + 180
-mean2017 <- select(mean2017, 'Date.noon', 'Temperature', 'Wind.Speed', 'Wind.direction.avg')
+mean2017 <- select(mean2017, 'Date.noon', 'Temperature', 'Wind.Speed', 
+                   'Wind.direction.avg')
 mean2017 <- mean2017 %>%
   mutate(Wind.direction = cut(
     Wind.direction.avg,
     breaks = c(0, direction$degree_max, 360), 
-    labels = c(direction$cardinal, 'N')
-  ))
+    labels = c(direction$cardinal, 'N')))
 
 # Import 2018 Meteorology Data
-
 wind2018 <- read.csv("./Data/Raw/2018Weather.csv", header = T)
 colnames(wind2018) <- c('Time', 'Air.Pressure', 'Dewpoint', 'Precipitation', 
-                        'Precipitation.Intensity', 'Relative.Humidity', 'Temperature',
-                        'Total.Precipitation', 'Wind.Chill.Temperature', 'Wind.Direction',
-                        'Wind.Direction.vct', 'Wind.Speed', 'Wind.Speed.avg', 'Wind.Speed.max')
-wind2018$u.wind <- - wind2018$Wind.Speed * sin(2 * pi * wind2018$Wind.Direction / 360)
-wind2018$v.wind <- - wind2018$Wind.Speed * cos(2 * pi * wind2018$Wind.Direction / 360)
+                        'Precipitation.Intensity','Relative.Humidity', 
+                        'Temperature', 'Total.Precipitation', 
+                        'Wind.Chill.Temperature', 'Wind.Direction',
+                        'Wind.Direction.vct', 'Wind.Speed', 'Wind.Speed.avg', 
+                        'Wind.Speed.max')
+
+wind2018$u.wind <- - wind2018$Wind.Speed * sin(2*pi*wind2018$Wind.Direction/360)
+wind2018$v.wind <- - wind2018$Wind.Speed * (2*pi*wind2018$Wind.Direction/360)
 
 #Convert time to date
-wind2018$Time <- strptime(wind2018$Time, format= "%Y-%m-%d %H:%M:%S", tz = "America/Toronto")
+wind2018$Time <- strptime(wind2018$Time, format= "%Y-%m-%d %H:%M:%S", tz = 
+                            "America/Toronto")
 wind2018$Time <- as.POSIXct(wind2018$Time)
-wind2018$Date.noon <- as.Date(wind2018$Time, format = "%Y-%m-%d %H:%M:%S", tz = "Antarctica/Davis")
-wind2018$Date <- as.Date(wind2018$Time, format = "%Y-%m-%d %H:%M:%S", tz = "America/Toronto")
+wind2018$Date.noon <- as.Date(wind2018$Time, format = "%Y-%m-%d %H:%M:%S", tz = 
+                                "Antarctica/Davis")
+wind2018$Date <- as.Date(wind2018$Time, format = "%Y-%m-%d %H:%M:%S", tz = 
+                           "America/Toronto")
 
 #Compute mean
-mean2018 <- as.data.frame(aggregate(cbind(Temperature, Wind.Speed, u.wind, v.wind) ~ Date.noon, wind2018, mean))
+mean2018 <- as.data.frame(aggregate(cbind(Temperature, Wind.Speed, u.wind, v.wind) ~
+                                      Date.noon, wind2018, mean))
 mean2018$Wind.direction.avg <- (atan2(mean2018$u.wind, mean2018$v.wind) * 360/2/pi) + 180
-mean2018 <- select(mean2018, 'Date.noon', 'Temperature', 'Wind.Speed', 'Wind.direction.avg')
+mean2018 <- select(mean2018, 'Date.noon', 'Temperature', 'Wind.Speed', 
+                   'Wind.direction.avg')
 
 mean2018 <- mean2018 %>%
   mutate(Wind.direction = cut(
     Wind.direction.avg,
     breaks = c(0, direction$degree_max, 360), 
-    labels = c(direction$cardinal, 'N')
-  ))
+    labels = c(direction$cardinal, 'N')))
 
 #Merge with chloroprene data
 air <- read.csv("./Data/Raw/Air.csv", header = T)
-colnames(air) <- c("Date.noon", "Chad.Baker", "Hwy44", "Highschool", "Elementary.School",
-                   "Levee", "Ochsner.Hospital")
+colnames(air) <- c("Date.noon", "Chad.Baker", "Hwy44", "Highschool",
+                   "Elementary.School", "Levee", "Ochsner.Hospital")
 air$Date.noon <- as.Date(air$Date.noon, format= "%m/%d/%Y")
 data2016 <- merge(mean2016, air, by = "Date.noon")
-data2016 <- mutate(data2016, Year= year(Date.noon), Month = month(Date.noon))
+data2016 <- mutate(data2016, Year= year(Date.noon), Month = month(Date.noon),
+                   Week = week(Date.noon))
 data2017 <- merge(mean2017, air, by = "Date.noon")
-data2017 <- mutate(data2017, Year= year(Date.noon), Month = month(Date.noon))
+data2017 <- mutate(data2017, Year= year(Date.noon), Month = month(Date.noon),
+                   Week = week(Date.noon))
 data2018 <- merge(mean2018, air, by = "Date.noon")
-data2018 <- mutate(data2018, Year= year(Date.noon), Month = month(Date.noon))
+data2018 <- mutate(data2018, Year= year(Date.noon), Month = month(Date.noon),
+                   Week = week(Date.noon))
 data.all <- rbind(data2016, data2017, data2018)
 
 ```
@@ -171,6 +193,55 @@ data.all <- rbind(data2016, data2017, data2018)
 
 <Include text sections to accompany these R chunks to explain the reasoning behind your workflow, rationale for your approach, and the justification of meeting or failing to meet assumptions of tests.>
 
+```{r}
+# Temporal autocorrelation
+# Remove NAs
+data.gather <- gather(data.all, "Site.Name", "Concentration", 
+                     Chad.Baker:Ochsner.Hospital) %>% na.exclude()
+
+Temp.auto <- lme(data = data.gather, Concentration ~ Temperature * Site.Name, 
+                 random = ~1|Week)
+Temp.auto
+ACF(Temp.auto)
+Temp.mixed <- lme(data = data.gather, Concentration ~ Temperature * Site.Name, 
+                 random = ~1|Week, correlation 
+                 = corAR1(value = -0.066), method = "REML")
+summary(Temp.mixed)
+
+Speed.auto <- lme(data = data.gather, Concentration ~ Wind.Speed * Site.Name, 
+                 random = ~1|Week)
+Speed.auto
+ACF(Speed.auto)
+Speed.mixed <- lme(data = data.gather, Concentration ~ Wind.Speed * Site.Name, 
+                 random = ~1|Week, correlation 
+                 = corAR1(value = -0.054), method = "REML")
+summary(Speed.mixed)
+
+Speed.fixed <- gls(data = data.gather, Concentration ~ Wind.Speed * Site.Name, 
+                   method = "REML")
+summary(Speed.fixed)
+anova(Speed.mixed, Speed.fixed)
+
+# Plot
+speed.plot <-
+  ggplot(data.gather, aes(x = Wind.Speed, y = Concentration, 
+                          color = Site.Name, shape = Site.Name)) +
+  geom_point() +
+  geom_abline(intercept = 11.562, slope = -1.664) +
+  scale_color_brewer(palette = 'RdYlBu', name = "Site Name",
+                     labels = c("Chad Baker St", "Elementary School", 
+                                "East Saint John High School", "Hwy 44",
+                                "Mississippi River Levee", "Ochsner Hospital")) +
+  scale_shape_discrete(labels = c("Chad Baker St", "Elementary School", 
+                                "East Saint John High School", "Hwy 44",
+                                "Mississippi River Levee", "Ochsner Hospital"),
+                       name = "Site Name") +
+  ylab(expression(paste("Chloroprene Concentration (", mu, "g/", m^3,")", separate = ""))) +
+  xlab('Wind Speed, mph') +
+  scale_y_continuous(expand = c(0, 0)) +
+  light.theme
+print(speed.plot)
+```
 
 \newpage
 
