@@ -3,6 +3,7 @@
 ## Air Dataset
 
 #Summary
+
 This dataset contains chloroprene concentrations at six monitoring sites around the Denka Performance Elastomer in LaPlace, Louisiana from May 2016 to December 2018.
 
 # Database Information
@@ -15,10 +16,14 @@ Please contact me if you would like a copy of the original file.
 EPA monitors chloroprene concentrations at the six monitoring sites:
 
 238 Chad Baker (238 Chad Baker Street);
+
 Acorn and Hwy 44 (Acorn and Highway 44);
+
 East St. John the Baptist High School;
+
 Fifth Ward Elementary School;
 Levee (Mississippi River Levee);
+
 Ochsner Hospital.
 
 More information about the air monitoring plan can be found at https://www.epa.gov/la/laplace-louisiana-air-monitoring-data#summaries.
@@ -38,7 +43,9 @@ The meteorology data is seperated by year.
 
 Timestamp format:
 2016 - Year/Month/Day Hour:Minute
+
 2017 - Month/Day/Year Hour:Minute
+
 2018 - Year/Month/Day Hour:Minute
 
 Column names are self-explanatory. 
