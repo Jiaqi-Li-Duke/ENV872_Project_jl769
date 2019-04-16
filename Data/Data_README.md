@@ -31,7 +31,7 @@ Ochsner Hospital.
 
 More information about the air monitoring plan can be found at https://www.epa.gov/la/laplace-louisiana-air-monitoring-data#summaries.
 
-Chlorprene concentration is measured from noon to noon. For instance, data for 5/31/2016 is the mean chloroprene concentration from 5/30/2016 noon to 5/31/2016 noon.
+Chlorprene concentration is measured from noon to noon for 24 hours continuously every three days. For instance, data for 5/31/2016 is the mean chloroprene concentration from 5/30/2016 noon to 5/31/2016 noon.
 
 # Weather Dataset
 
