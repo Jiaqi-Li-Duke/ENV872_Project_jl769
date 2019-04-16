@@ -8,7 +8,7 @@ geometry: margin=2.54cm
 title: ENV872 Final Project
 subtitle: https://github.com/Jiaqi-Li-Duke/ENV872_Project_jl769
 author: Jiaqi Li
-abstract: "High concentrations of chloroprene have been measured in the vicinity of the Denka Performance Elastomer facility in LaPlace, LA. Chloroprene concentrations at six monitoring sites and meteorology data are available since May 2016. New emission reduction projects were implemented by the company to reduce chloroprene emissions in 2018. This project aims to investigate the relationship between wind speed and chloroprene concentrations and the effects of emission reduction projects using multiple statistical approaches. The results show that there is a statistically significant negative correlation between chloroprene concentration and wind speed at the three monitoring sites within 1 km to the Denka facility. Chloroprene concentrations decline significantly from 2016 to 2018, and the changing points occurred around January 2018. However, the current concentrations still far exceed the recommended level without increasing risk of cancer, and more efforts need to be made to protect public health in the LaPlace community."
+abstract: "High concentrations of chloroprene have been measured in the vicinity of the Denka Performance Elastomer facility in LaPlace, LA. Chloroprene concentrations at six monitoring sites and meteorology data are available since May 2016. New emission reduction projects were implemented by the company to reduce chloroprene emissions in 2018. This project aims to investigate the relationship between wind speed and chloroprene concentrations and the effects of emission reduction projects using multiple statistical approaches. The results show that there is a statistically significant negative correlation between chloroprene concentration and wind speed at the three monitoring sites within 1 km to the Denka facility. Chloroprene concentrations decline significantly from 2016 to 2018, and the changing points occurred around January 2018. However, the current concentrations still far exceed the recommended level of 0.2 µg/m^3^ without increasing risk of cancer. More efforts need to be made to protect public health in the LaPlace community."
 fontsize: 12pt
 mainfont: Times New Roman
 editor_options: 
@@ -45,7 +45,7 @@ theme_set(light.theme)
 
 High concentrations of chloroprene, which is a monomer used to produce synthetic rubber and is classified as likely to be carcinogenic to humans, have been measured in the vicinity of the Denka Performance Elastomer facility in LaPlace, LA. New emission reduction projects were implemented by the company to reduce chloroprene emissions in 2018.
 
-This project aims to answer two questions. First, is there any correlation between chloroprene concentrations and wind speed? Second, whether there is a shift observed in the chloroprene concentrations and at what point does the change point occur?
+This project aims to answer two questions. First, is there any correlation between chloroprene concentrations and wind speed? Second, is there is a decline observed in the chloroprene concentrations over time and if so, at what point does the change point occur?
 
 \newpage
 
