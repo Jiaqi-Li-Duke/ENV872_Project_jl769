@@ -5,17 +5,15 @@ output:
     fig_caption: yes
     number_sections: yes
 geometry: margin=2.54cm
-title: Experiment Title
+title: ENV872 Final Project
 subtitle: https://github.com/Jiaqi-Li-Duke/ENV872_Project_jl769
 author: Jiaqi Li
-abstract: "Experimental overview. This section should be no longer than 250 words."
+abstract: "High concentrations of chloroprene have been measured in the vicinity of the Denka Performance Elastomer facility in LaPlace, LA. Chloroprene concentrations at six monitoring sites and meteorology data are available since May 2016. New emission reduction projects were implemented by the company to reduce chloroprene emissions in 2018. This project aims to investigate the relationship between wind speed and chloroprene concentrations and the effects of emission reduction projects using multiple statistical approaches. The results show that there is a statistically significant negative correlation between chloroprene concentration and wind speed at the three monitoring sites within 1 km to the Denka facility. Chloroprene concentrations decline significantly from 2016 to 2018, and the changing points occurred around January 2018. However, the current concentrations still far exceed the recommended level without increasing risk of cancer, and more efforts need to be made to protect public health in the LaPlace community."
 fontsize: 12pt
 mainfont: Times New Roman
 editor_options: 
   chunk_output_type: console
 ---
-
-<Information in these brackets are used for annotating the RMarkdown file. They will not appear in the final version of the PDF document>
 
 \newpage
 \tableofcontents 
@@ -25,86 +23,81 @@ editor_options:
 \listoffigures 
 \newpage
 
-<Setup the global options for the R chunks in your document>
-
-<Note: set up autoreferencing for figures and tables in your document>
 
 ```{r setup, include=FALSE}
-# Set your working directory
+
+# Set working directory
 setwd("/Users/ljq/Desktop/Blue Devils/Data Analysis/Final_Project")
-# Load your packages
+# Load packages
 library(dplyr)
 library(lubridate)
 library(tidyverse)
-library(nlme)
+library(trend)
+library(knitr)
+
 # Set your ggplot theme
-light.theme <- theme_light(base_size = 18) +
+light.theme <- theme_light(base_size = 14) +
   theme(axis.text = element_text(color = "black"))
+theme_set(light.theme)
 ```
 
+# Research Question
 
-# Research Question and Rationale
+High concentrations of chloroprene, which is a monomer used to produce synthetic rubber and is classified as likely to be carcinogenic to humans, have been measured in the vicinity of the Denka Performance Elastomer facility in LaPlace, LA. New emission reduction projects were implemented by the company to reduce chloroprene emissions in 2018.
 
-<Paragraph detailing the rationale for your analysis. What is the significant application and/or interest in this topic? Connect to environmental topic(s)/challenge(s).>
-
-<Paragraph detailing your research question(s) and goals. What do you want to find out? Include a sentence (or a few) on the dataset you are using to answer this question - just enough to give your reader an idea of where you are going with the analysis.>
+This project aims to answer two questions. First, is there any correlation between chloroprene concentrations and wind speed? Second, whether there is a shift observed in the chloroprene concentrations and at what point does the change point occur?
 
 \newpage
 
 # Dataset Information
 
-<Information on how the dataset for this analysis were collected, the data contained in the dataset, and any important pieces of information that are relevant to your analyses. This section should contain much of same information as the README file for the dataset but formatted in a way that is more narrative.>
+There are two parts of data in this analysis, chloroprene concentrations at the six monitoring sites and meteorology data collected at the meteorological station. Chloroprene concentrations are available from May 2016 to December 2018 and are measured from noon to noon for 24 hours continuously every three days by U.S. EPA. For instance, data for 5/31/2016 is the mean chloroprene concentration from 5/30/2016 noon to 5/31/2016 noon.
+
+EPA also collects local scale minute-by-minute level meteorology data, including air pressure, dewpoint, precipitation, relative humidity, temperature, wind direction, and wind speed since May 2016. To match with chloroprene data, the daily averages of meteorology data are computed from noon to noon.
 
 <Add a table that summarizes your data structure. This table can be made in markdown text or inserted as a `kable` function in an R chunk. If the latter, do not include the code used to generate your table.>
 
 ```{r Import Data}
 # Import 2016 Meteorology Data
-wind2016 <- read.csv("./Data/Raw/2016Weather.csv", header = T)
+wind2016 <- read.csv("../Data/Raw/2016Weather.csv", header = T)
 colnames(wind2016) <- c('Time', 'Air.Pressure', 'Dewpoint', 'Precipitation', 
                         'Precipitation.Intensity','Relative.Humidity', 
                         'Temperature', 'Total.Precipitation', 
                         'Wind.Chill.Temperature', 'Wind.Direction',
                         'Wind.Direction.vct', 'Wind.Speed', 'Wind.Speed.avg', 
                         'Wind.Speed.max')
+# Create wind components
 wind2016$u.wind <- - wind2016$Wind.Speed * sin(2*pi*wind2016$Wind.Direction/360)
 wind2016$v.wind <- - wind2016$Wind.Speed * cos(2*pi*wind2016$Wind.Direction/360)
 
-#Convert time to date
+# Convert time to date
 wind2016$Time <- as.POSIXct(wind2016$Time)
 wind2016$Date.noon <- as.Date(wind2016$Time, format = "%Y/%m/%d %H:%M:%S", tz =
                                 "Antarctica/Davis")
 wind2016$Date <- as.Date(wind2016$Time, format = "%Y/%m/%d %H:%M:%S", tz =
                            "America/Toronto")
 
-#Compute mean
-mean2016 <- as.data.frame(aggregate(cbind(Temperature, Wind.Speed, u.wind, v.wind) ~
-                                      Date.noon, wind2016, mean))
-mean2016$Wind.direction.avg <- (atan2(mean2016$u.wind, mean2016$v.wind) * 360/2/pi)
-+ 180
-mean2016 <- select(mean2016, 'Date.noon', 'Temperature', 'Wind.Speed', 'Wind.direction.avg')
-
-# Convert wind direction
-direction <- read.csv("./Data/Raw/WindDirection.csv", header = T)
-direction$cardinal <- lapply(direction$cardinal, as.character)
-
-mean2016 <- mean2016 %>%
-  mutate(Wind.direction = cut(
-    Wind.direction.avg,
-    breaks = c(0, direction$degree_max, 360), 
-    labels = c(direction$cardinal, 'N')))
+# Compute mean wind speed and direction
+mean2016 <- as.data.frame(aggregate(cbind(Temperature, Wind.Speed, u.wind,
+                                          v.wind)~Date.noon, wind2016, mean))
+mean2016$Wind.direction.avg <- (atan2(mean2016$u.wind, mean2016$v.wind) 
+                                * 360/2/pi) + 180
+mean2016 <- select(mean2016, 'Date.noon', 'Temperature', 'Wind.Speed',
+                   'Wind.direction.avg')
 
 # Import 2017 Meteorology Data
-wind2017 <- read.csv("./Data/Raw/2017Weather.csv", header = T)
+wind2017 <- read.csv("../Data/Raw/2017Weather.csv", header = T)
 colnames(wind2017) <- c('Time', 'Air.Pressure', 'Dewpoint', 'Precipitation', 
                         'Precipitation.Intensity','Relative.Humidity', 
                         'Temperature', 'Total.Precipitation', 
                         'Wind.Chill.Temperature', 'Wind.Direction',
                         'Wind.Direction.vct', 'Wind.Speed', 'Wind.Speed.avg', 
                         'Wind.Speed.max')
+# Create wind components
 wind2017$u.wind <- - wind2017$Wind.Speed * sin(2*pi*wind2017$Wind.Direction/360)
 wind2017$v.wind <- - wind2017$Wind.Speed * cos(2*pi*wind2017$Wind.Direction/360)
 
-#Convert time to date
+# Convert time to date
 wind2017$Time <- strptime(wind2017$Time, format= "%m/%d/%Y %H:%M", tz = 
                             "America/Toronto")
 wind2017$Time <- as.POSIXct(wind2017$Time)
@@ -113,31 +106,27 @@ wind2017$Date.noon <- as.Date(wind2017$Time, format = "%Y/%m/%d %H:%M:%S", tz =
 wind2017$Date <- as.Date(wind2017$Time, format = "%Y/%m/%d %H:%M:%S", tz = 
                            "America/Toronto")
 
-#Compute mean
-mean2017 <- as.data.frame(aggregate(cbind(Temperature, Wind.Speed, u.wind, v.wind) ~
-                                      Date.noon, wind2017, mean))
-mean2017$Wind.direction.avg <- (atan2(mean2017$u.wind, mean2017$v.wind) * 360/2/pi) + 180
+# Compute mean
+mean2017 <- as.data.frame(aggregate(cbind(Temperature, Wind.Speed, u.wind,
+                                          v.wind)~Date.noon, wind2017, mean))
+mean2017$Wind.direction.avg <- (atan2(mean2017$u.wind, mean2017$v.wind) 
+                                *360/2/pi) + 180
 mean2017 <- select(mean2017, 'Date.noon', 'Temperature', 'Wind.Speed', 
                    'Wind.direction.avg')
-mean2017 <- mean2017 %>%
-  mutate(Wind.direction = cut(
-    Wind.direction.avg,
-    breaks = c(0, direction$degree_max, 360), 
-    labels = c(direction$cardinal, 'N')))
 
 # Import 2018 Meteorology Data
-wind2018 <- read.csv("./Data/Raw/2018Weather.csv", header = T)
+wind2018 <- read.csv("../Data/Raw/2018Weather.csv", header = T)
 colnames(wind2018) <- c('Time', 'Air.Pressure', 'Dewpoint', 'Precipitation', 
                         'Precipitation.Intensity','Relative.Humidity', 
                         'Temperature', 'Total.Precipitation', 
                         'Wind.Chill.Temperature', 'Wind.Direction',
                         'Wind.Direction.vct', 'Wind.Speed', 'Wind.Speed.avg', 
                         'Wind.Speed.max')
-
+# Create wind components
 wind2018$u.wind <- - wind2018$Wind.Speed * sin(2*pi*wind2018$Wind.Direction/360)
 wind2018$v.wind <- - wind2018$Wind.Speed * (2*pi*wind2018$Wind.Direction/360)
 
-#Convert time to date
+# Convert time to date
 wind2018$Time <- strptime(wind2018$Time, format= "%Y-%m-%d %H:%M:%S", tz = 
                             "America/Toronto")
 wind2018$Time <- as.POSIXct(wind2018$Time)
@@ -146,21 +135,17 @@ wind2018$Date.noon <- as.Date(wind2018$Time, format = "%Y-%m-%d %H:%M:%S", tz =
 wind2018$Date <- as.Date(wind2018$Time, format = "%Y-%m-%d %H:%M:%S", tz = 
                            "America/Toronto")
 
-#Compute mean
-mean2018 <- as.data.frame(aggregate(cbind(Temperature, Wind.Speed, u.wind, v.wind) ~
-                                      Date.noon, wind2018, mean))
-mean2018$Wind.direction.avg <- (atan2(mean2018$u.wind, mean2018$v.wind) * 360/2/pi) + 180
+# Compute mean
+mean2018 <- as.data.frame(aggregate(cbind(Temperature, Wind.Speed, u.wind, 
+                                          v.wind)~Date.noon, wind2018, mean))
+mean2018$Wind.direction.avg <- (atan2(mean2018$u.wind, mean2018$v.wind)
+                                *360/2/pi) + 180
 mean2018 <- select(mean2018, 'Date.noon', 'Temperature', 'Wind.Speed', 
                    'Wind.direction.avg')
 
-mean2018 <- mean2018 %>%
-  mutate(Wind.direction = cut(
-    Wind.direction.avg,
-    breaks = c(0, direction$degree_max, 360), 
-    labels = c(direction$cardinal, 'N')))
-
 #Merge with chloroprene data
-air <- read.csv("./Data/Raw/Air.csv", header = T)
+
+air <- read.csv("../Data/Raw/Air.csv", header = T)
 colnames(air) <- c("Date.noon", "Chad.Baker", "Hwy44", "Highschool",
                    "Elementary.School", "Levee", "Ochsner.Hospital")
 air$Date.noon <- as.Date(air$Date.noon, format= "%m/%d/%Y")
@@ -175,78 +160,204 @@ data2018 <- mutate(data2018, Year= year(Date.noon), Month = month(Date.noon),
                    Week = week(Date.noon))
 data.all <- rbind(data2016, data2017, data2018)
 
+# Gather the chloroprene concentrations
+data.gather <- gather(data.all, "Site.Name", "Concentration", 
+                     Chad.Baker:Ochsner.Hospital) %>% 
+  na.exclude() %>%
+  filter(Concentration > 0.05)
+
+# Save the processed data
+#write.csv(data.all, row.names = FALSE, 
+#file ="./Data/Processed/Chloroprene_Meteorology_all.csv")
+```
+
+A summary of chloroprene concentrations (µg/m^3^) at the six monitoring sites is shown in Table 1.
+
+\newpage
+```{r, echo=FALSE}
+Chloroprene <- data.gather %>%
+  filter(!is.na(Concentration)) %>%
+  group_by(Site.Name) %>%
+  summarize("Mean" = mean(Concentration), "Minimum" = min(Concentration), "Maximum" = max(Concentration), "SD" = sd(Concentration))
+
+kable(Chloroprene, caption = "Summary of chloroprene concentration")
 ```
 
 \newpage
 
 # Exploratory Data Analysis and Wrangling
 
-<Include R chunks for 5+ lines of summary code (display code and output), 3+ exploratory graphs (display graphs only), and any wrangling you do to your dataset(s).> 
+For the relationship between chloroprene concentration and wind speed, we selected three monitoring sites, Mississippi River Levee, Chad Baker Street, and Fifth Ward Elementary School, which are within 1 km to the facility. Concentrations which are not availabe or below detective level (0.05 µg/m^3^) are removed. Some of the summary information for the full dataset, the gathered dataset, and dataset containing sites within 1 km is listed below.
 
-<Include text sections to accompany these R chunks to explain the reasoning behind your workflow, and the rationale for your approach.>
+```{r Data Exploration}
+# Select the three sites within 1 km to the facility
+data.near <- select(data.all, 'Date.noon', 'Wind.Speed', 'Chad.Baker', 
+                    'Elementary.School', 'Levee')
+data.near.gather <- gather(data.near, "Site.Name", "Concentration", 
+                     Chad.Baker:Levee) %>% 
+  na.exclude() %>%
+  filter(Concentration > 0.05)
 
+data.near.gather <- mutate(data.near.gather, Log.concentration
+                           = log(Concentration))
+# Data summary
+dim(data.all)
+head(data.all)
+colnames(data.all)
+summary(data.all)
+
+dim(data.gather)
+colnames(data.gather)
+
+dim(data.near.gather)
+colnames(data.near.gather)
+
+```
+
+Figure 1 shows the chloroprene concentrations at the six monitoring sites from May 2016 to December 2018. The distributions of original and log-transformed chloroprene concentrations at the three closer monitoring sites are shown in Figure 2 and 3. As we can see from the figures, the log-transformed concentrations are more normally distributed. Therefore, we use the log-transformed concentration in the following analysis.
+
+```{r, echo=FALSE, fig.cap = "Chloroprene concentrations at six monitoring sites over time"}
+# Data visualization
+# Reorder the sites
+data.gather$Site.Name <- factor(data.gather$Site.Name,
+                                levels = c("Levee", "Chad.Baker", 
+                                           "Elementary.School", "Hwy44", 
+                                           "Ochsner.Hospital", "Highschool"))
+change.plot <-
+  ggplot(data.gather, aes(x = Date.noon, y = Concentration, color = Site.Name)) +
+  geom_point() +
+  geom_line() +
+  scale_x_date(name = "Date", date_breaks = "3 months", date_labels = "%b %Y") +
+  scale_color_brewer(palette = 'Set1', name = "Site Name", 
+                     labels = c("Mississippi River Levee", "Chad Baker St", 
+                                "Elementary School", "Highway 44",
+                                "Ochsner Hospital",
+                                "East Saint John High School")) +
+  ylab(expression(paste("Concentration (", mu, "g/", m^3,")", separate = ""))) +
+  theme(axis.text.x = element_text(angle = 45,  hjust = 1)) +
+  theme(legend.position = "top")
+
+print(change.plot)
+```
+
+```{r, echo=FALSE, fig.cap="Distribution of chloroprene concentration"}
+# Distribution plot
+ggplot(data.near.gather, aes(x = Concentration)) + geom_histogram(binwidth = 3) +
+  xlab(expression(paste("Chloroprene concentration (", mu, "g/", m^3,")",
+                        separate ="")))
+```
+
+```{r, echo=FALSE, fig.cap="Distribution of log-transformed chloroprene concentration"}
+# Log-transformed distribution plot
+ggplot(data.near.gather, aes(x = Log.concentration)) + geom_histogram(binwidth = 0.2) +
+  xlab(expression(paste("Log-transformed chloroprene concentration (", mu, "g/",
+                        m^3,")", separate ="")))
+```
 
 \newpage
 
 # Analysis
-<Include R chunks for 3+ statistical tests (display code and output) and 3+ final visualization graphs (display graphs only).>
 
-<Include text sections to accompany these R chunks to explain the reasoning behind your workflow, rationale for your approach, and the justification of meeting or failing to meet assumptions of tests.>
+We begin with testing the normality of the chloroprene concentrations.
 
 ```{r}
-# Temporal autocorrelation
-# Remove NAs
-data.gather <- gather(data.all, "Site.Name", "Concentration", 
-                     Chad.Baker:Ochsner.Hospital) %>% na.exclude()
+# Distribution test
+# Normal distribution
+shapiro.test(data.near.gather$Concentration)
+shapiro.test(data.near.gather$Log.concentration)
 
-Temp.auto <- lme(data = data.gather, Concentration ~ Temperature * Site.Name, 
-                 random = ~1|Week)
-Temp.auto
-ACF(Temp.auto)
-Temp.mixed <- lme(data = data.gather, Concentration ~ Temperature * Site.Name, 
-                 random = ~1|Week, correlation 
-                 = corAR1(value = -0.066), method = "REML")
-summary(Temp.mixed)
+```
 
-Speed.auto <- lme(data = data.gather, Concentration ~ Wind.Speed * Site.Name, 
-                 random = ~1|Week)
-Speed.auto
-ACF(Speed.auto)
-Speed.mixed <- lme(data = data.gather, Concentration ~ Wind.Speed * Site.Name, 
-                 random = ~1|Week, correlation 
-                 = corAR1(value = -0.054), method = "REML")
-summary(Speed.mixed)
+Even though the results of Shapiro test show that neither of the original or log-transformed chloroprene concentrations is normally distributed, considering the nature of this dataset and the distribution figures above, we performed the generalized linear model using the log-transformed data. And the result shows that there is a statistically significant correlation between wind speed and chloroprene concentrtion (Generalized linear model; coefficient = -0.303, t-value = -4.940, p < 0.0001). The correlation is shown in Figure 4.
 
-Speed.fixed <- gls(data = data.gather, Concentration ~ Wind.Speed * Site.Name, 
-                   method = "REML")
-summary(Speed.fixed)
-anova(Speed.mixed, Speed.fixed)
+```{r}
+speed.glm <- glm(data = data.near.gather, Log.concentration ~ Wind.Speed)
+summary(speed.glm)
+```
 
-# Plot
+```{r, echo=FALSE, fig.cap= "Chloroprene concentration and wind speed"}
+# GLM Plot
 speed.plot <-
-  ggplot(data.gather, aes(x = Wind.Speed, y = Concentration, 
-                          color = Site.Name, shape = Site.Name)) +
+  ggplot(data.near.gather, aes(x = Wind.Speed, y = Log.concentration, 
+                          color = Site.Name)) +
   geom_point() +
-  geom_abline(intercept = 11.562, slope = -1.664) +
-  scale_color_brewer(palette = 'RdYlBu', name = "Site Name",
-                     labels = c("Chad Baker St", "Elementary School", 
-                                "East Saint John High School", "Hwy 44",
-                                "Mississippi River Levee", "Ochsner Hospital")) +
-  scale_shape_discrete(labels = c("Chad Baker St", "Elementary School", 
-                                "East Saint John High School", "Hwy 44",
-                                "Mississippi River Levee", "Ochsner Hospital"),
-                       name = "Site Name") +
-  ylab(expression(paste("Chloroprene Concentration (", mu, "g/", m^3,")", separate = ""))) +
+  geom_abline(intercept = 1.720, slope = -0.303) +
+  scale_color_brewer(palette = 'Set2', name = "Site Name",
+                     labels = c("Chad Baker St", "Elementary School",
+                                "Mississippi River Levee")) +
+  ylab(expression(paste("Log Chloroprene Concentration (", mu, "g/", m^3,")", separate = ""))) +
   xlab('Wind Speed, mph') +
   scale_y_continuous(expand = c(0, 0)) +
   light.theme
 print(speed.plot)
 ```
 
+Another objective of this project is to investigate the change of chloroprene concentrations over time. As shown in Table 2, there is an obvious drop in chloroprene concentrations from 2016 to 2018. The result of ANOVA test also suggests that the concentrations are statistically significant different from each other in 2016, 2017, and 2018 (ANOVA test; F-statistic = 19.76, df = 1155, p-value < 0.0001). 
+
+Pettitt's test allows us to find the changing point in our data. According to Denka, the emission reduction projects were implemented by the company to reduce chloroprene emissions around the beginning in 2018. As the results shown below, the changing points occurred on 2017-11-13 at Chad Baker St, on 2018-01-15 at Fifth Ward Elementary School, and on 2018-01-09 at Missippi River Levee, which agree with the statement of the company.
+
+```{r}
+# Test for change over time
+Year.mean <- data.gather %>%
+  filter(!is.na(Concentration)) %>%
+  group_by(Year) %>%
+  summarize("Mean" = mean(Concentration))
+kable(Year.mean, caption = "Annual average of chloroprene concentration")
+
+air.lm <- aov(data = data.gather,  Concentration ~ as.factor(Year))
+summary(air.lm)
+# Test for change point
+# Remove NAs
+data.clean <- na.exclude(data.all)
+# Pettitt test
+pettitt.test(data.clean$Chad.Baker)
+pettitt.test(data.clean$Elementary.School)
+pettitt.test(data.clean$Levee)
+
+```
+
+```{r, echo=FALSE, fig.cap="Chloroprene change point at Chade Baker St"}
+# Plot for Chad Baker
+Chad.Baker <- 
+  ggplot(data.clean, aes(x = Date.noon, y = Chad.Baker)) +
+  geom_point(color = "#66c2a5") +
+  geom_vline(xintercept=as.Date('2017-11-13'), lty = 2, color = "#636363") +
+  xlab("Date") +
+  ylab(expression(paste("Chloroprene Concentration at Chad Baker (", mu, "g/", m^3,")", separate = "")))
+  
+print(Chad.Baker)
+```
+
+```{r, echo=FALSE, fig.cap="Chloroprene change point at Elementary School"}
+# Plot for Elementary School
+Elementary <- 
+  ggplot(data.clean, aes(x = Date.noon, y = Elementary.School)) +
+  geom_point(color = "#fc8d62") +
+  geom_vline(xintercept=as.Date('2018-01-15'), lty = 2, color = "#636363") +
+  xlab("Date") +
+  ylab(expression(paste("Chloroprene at Elementary School (",
+                        mu, "g/", m^3,")", separate = "")))
+  
+print(Elementary)
+```
+
+```{r, echo=FALSE, fig.cap="Chloroprene change point at Mississippi River Levee"}
+# Plot for Levee
+Levee <- 
+  ggplot(data.clean, aes(x = Date.noon, y = Levee)) +
+  geom_point(color = "#8da0cb") +
+  geom_vline(xintercept=as.Date('2018-01-09'), lty = 2, color = "#636363") +
+  xlab("Date") +
+  ylab(expression(paste("Chloroprene concentration at Levee (",
+                        mu, "g/", m^3,")", separate = "")))
+  
+print(Levee)
+```
+
 \newpage
 
 # Summary and Conclusions
-<Summarize your major findings from your analyses. What conclusions do you draw from your findings? Make sure to apply this to a broader application for the research question you have answered.>
 
+The results show that there is a statistically significant negative correlation between chloroprene concentration and wind speed at the three monitoring sites within 1 km to the Denka facility. Residents living close to the Denka facility are facing high risk of developing cancer because of potential explosure of chloroprene. Meteorology factors may play an essential part in the distribution of chloroprene. The results of the project suggests that wind speed affacts the concentrations of chloroprene close to the facility.
 
-
+Chloroprene concentrations decline significantly from 2016 to 2018, and the changing points at the three monitoring sites within 1 km to the facility all occurred around January 2018, which is accordant with the implementation time of the emission reduction projects announced by Denka. Substantial decreases in chloropren concentraitons have been seen from 2016 to 2018. However, the current concentrations still far exceed the recommended level without increasing risk of cancer (0.2 µg/m^3^). More efforts need to be made to protect public health in the LaPlace community.
